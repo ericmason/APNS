@@ -147,8 +147,7 @@ module APNS
   private
 
   def self.open_connection(host, port, pem)
-    raise "The path to your pem file is not set. (APNS.pem = /path/to/cert.pem)" unless self.pem
-    raise "The path to your pem file does not exist!" unless File.exist?(self.pem)
+    raise "The PEM data is not set" unless self.pem
     
     context      = OpenSSL::SSL::SSLContext.new
     context.cert = OpenSSL::X509::Certificate.new(pem)
