@@ -42,11 +42,14 @@ module APNS
   @pem = nil # this should be the contents of the pem file not the path
   @pass = nil
 
+  @max_connection_age = 60 * 60 # 1 hour
   @cache_connections = false
   @connections = {}
 
+
+
   class << self
-    attr_accessor :host, :port, :feedback_host, :feedback_port, :pem, :pass, :cache_connections
+    attr_accessor :host, :port, :feedback_host, :feedback_port, :pem, :pass, :cache_connections, :max_connection_age
   end
 
   def self.establish_notification_connection
@@ -175,7 +178,8 @@ module APNS
   end
 
   def self.create_connection(host, port, pem)
-    @connections[[host, port, pem]] = self.open_connection(host, port, pem)
+    ssl, sock = self.open_connection(host, port, pem)
+    @connections[[host, port, pem]] = [ssl, sock, Time.now]
   end
 
   def self.find_connection(host, port, pem)
@@ -202,9 +206,9 @@ module APNS
         self.create_connection(host, port, pem)
       end
 
-      ssl, sock = self.find_connection(host, port, pem)
+      ssl, sock, connection_opened_at = self.find_connection(host, port, pem)
       # If we're closed, reconnect
-      if ssl.closed?
+      if ssl.closed? || Time.now - connection_opened_at > @max_connection_age
         self.reconnect_connection(host, port, pem)
         self.find_connection(host, port, pem)
       else
